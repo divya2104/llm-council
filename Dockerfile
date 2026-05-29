@@ -2,12 +2,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY . .
+COPY pyproject.toml .
+COPY backend ./backend
 
 RUN pip install --upgrade pip
-RUN pip install uvicorn fastapi
 
-RUN pip install -r requirements.txt
+RUN pip install \
+    fastapi \
+    "uvicorn[standard]" \
+    python-dotenv \
+    httpx \
+    pydantic
 
 EXPOSE 8000
 
