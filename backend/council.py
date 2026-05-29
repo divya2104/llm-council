@@ -101,7 +101,7 @@ Now provide your evaluation and ranking:"""
     stage2_results = []
     for model, response in responses.items():
         if response is not None:
-            full_text = response.get('content', '')
+            full_text = response.get('content') or ''
             parsed = parse_ranking_from_text(full_text)
             stage2_results.append({
                 "model": model,
