@@ -187,6 +187,8 @@ def parse_ranking_from_text(ranking_text: str) -> List[str]:
     import re
 
     # Look for "FINAL RANKING:" section
+    if not ranking_text:
+        return []
     if "FINAL RANKING:" in ranking_text:
         # Extract everything after "FINAL RANKING:"
         parts = ranking_text.split("FINAL RANKING:")
