@@ -5,10 +5,9 @@ WORKDIR /app
 COPY . .
 
 RUN pip install --upgrade pip
+RUN pip install uvicorn fastapi
 
-RUN pip install uv
-
-RUN uv pip install --system .
+RUN pip install -r requirements.txt
 
 EXPOSE 8000
 
