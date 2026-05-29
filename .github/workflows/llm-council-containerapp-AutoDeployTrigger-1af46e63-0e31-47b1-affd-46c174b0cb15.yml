@@ -35,15 +35,10 @@ jobs:
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
-          _dockerfilePathKey_: _dockerfilePath_
-          _targetLabelKey_: _targetLabel_
-          registryUrl: 
-          registryUsername: ${{ secrets.LLMCOUNCILCONTAINERAPP_REGISTRY_USERNAME }}
-          registryPassword: ${{ secrets.LLMCOUNCILCONTAINERAPP_REGISTRY_PASSWORD }}
+          dockerfilePath: ./Dockerfile
+          acrName: aicoellm
           containerAppName: llm-council-containerapp
           resourceGroup: RG-Environment9
-          imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
-          _buildArgumentsKey_: |
-            _buildArgumentsValues_
+          imageToBuild: aicoellm.azurecr.io/llm-council:${{ github.sha }}
 
 
