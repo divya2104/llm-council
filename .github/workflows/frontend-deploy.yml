@@ -37,6 +37,13 @@ jobs:
         run: |
           unzip -l frontend.zip
 
+          
+      - name: Check Secrets Exist
+        run: |
+          echo "Username length: ${#AZURE_WEBAPP_USERNAME}"
+        env:
+          AZURE_WEBAPP_USERNAME: ${{ secrets.AZURE_WEBAPP_USERNAME }}
+
       - name: Deploy to Azure
         run: |
           curl -v -X POST \
