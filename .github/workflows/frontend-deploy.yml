@@ -44,3 +44,5 @@ jobs:
             -H "Content-Type: application/zip" \
             --data-binary @frontend.zip \
             "https://llm-council-frontend-webapp-dfavdxhcatdth8gk.scm.centralindia-01.azurewebsites.net/api/zipdeploy"
+
+
