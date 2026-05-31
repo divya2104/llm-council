@@ -46,7 +46,7 @@ jobs:
 
       - name: Deploy to Azure
         run: |
-          curl -v -X POST \
+          curl --fail --silent --show-error \
             -u "${{ secrets.AZURE_WEBAPP_USERNAME }}:${{ secrets.AZURE_WEBAPP_PASSWORD }}" \
             -H "Content-Type: application/zip" \
             --data-binary @frontend.zip \
