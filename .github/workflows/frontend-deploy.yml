@@ -33,10 +33,9 @@ jobs:
           cd dist
           zip -r ../frontend.zip .
 
-      - name: Verify ZIP
+      - name: Inspect ZIP
         run: |
-          pwd
-          ls -la
+          unzip -l frontend.zip
 
       - name: Deploy to Azure
         run: |
