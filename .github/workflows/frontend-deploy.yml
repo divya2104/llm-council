@@ -1,4 +1,4 @@
-name: Deploy Frontend
+name: Build Frontend
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     defaults:
@@ -14,42 +14,23 @@ jobs:
         working-directory: frontend
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Install dependencies
-        run: npm install
+      - run: npm install
 
-      - name: Build
-        run: npm run build
+      - run: npm run build
 
-      - name: Create ZIP package
+      - name: Create Linux ZIP
         run: |
           cd dist
           zip -r ../frontend.zip .
 
-      - name: Inspect ZIP
-        run: |
-          unzip -l frontend.zip
-
-          
-      - name: Check Secrets Exist
-        run: |
-          echo "Username length: ${#AZURE_WEBAPP_USERNAME}"
-        env:
-          AZURE_WEBAPP_USERNAME: ${{ secrets.AZURE_WEBAPP_USERNAME }}
-
-      - name: Deploy to Azure
-        run: |
-          curl --fail --silent --show-error \
-            -u "${{ secrets.AZURE_WEBAPP_USERNAME }}:${{ secrets.AZURE_WEBAPP_PASSWORD }}" \
-            -H "Content-Type: application/zip" \
-            --data-binary @frontend.zip \
-            "https://llm-council-frontend-webapp-dfavdxhcatdth8gk.scm.centralindia-01.azurewebsites.net/api/zipdeploy"
-
-
+      - name: Upload ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-zip
+          path: frontend/frontend.zip
