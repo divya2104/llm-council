@@ -37,5 +37,5 @@ jobs:
         run: |
           curl -X POST \
             -u "${{ secrets.AZURE_WEBAPP_USERNAME }}:${{ secrets.AZURE_WEBAPP_PASSWORD }}" \
-            --data-binary @frontend/frontend.zip \
+            --data-binary @frontend.zip
             "https://llm-council-frontend-webapp-dfavdxhcatdth8gk.scm.centralindia-01.azurewebsites.net/api/zipdeploy"
