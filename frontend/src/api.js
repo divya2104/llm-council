@@ -2,7 +2,10 @@
  * API client for the LLM Council backend.
  */
 
-const API_BASE = 'http://localhost:8001';
+const API_BASE =
+  window.location.hostname === 'localhost'
+    ? 'http://localhost:8001'
+    : 'https://llm-council-containerapp.nicedesert-691670aa.southindia.azurecontainerapps.io';
 
 export const api = {
   /**
