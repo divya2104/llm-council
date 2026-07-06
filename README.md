@@ -34,10 +34,10 @@ cd ..
 
 ### 2. Configure API Key
 
-Create a `.env` file in the project root:
+Copy `.env.example` to `.env` in the project root and fill in your own key:
 
 ```bash
-OPENROUTER_API_KEY=sk-or-v1-...
+cp .env.example .env
 ```
 
 Get your API key at [openrouter.ai](https://openrouter.ai/). Make sure to purchase the credits you need, or sign up for automatic top up.
@@ -78,6 +78,17 @@ npm run dev
 ```
 
 Then open http://localhost:5173 in your browser.
+
+### Windows / corporate laptop notes
+
+- `start.sh` needs bash (Git Bash/WSL); if that's not available, use **Option 2** above — two plain terminals, no shell scripting required.
+- Node version matters: this project needs Node **20.19+ or 22.12+** (Vite 7 requirement), pinned in `.nvmrc`/`package.json` engines. If you use `nvm`/`fnm`, just run `nvm use` in the repo root.
+- If you can't install global tools system-wide, both `uv` and Node can be installed per-user (no admin rights needed): see the [uv installer docs](https://docs.astral.sh/uv/getting-started/installation/) and [nvm-windows](https://github.com/coreybutler/nvm-windows) or [Volta](https://volta.sh/).
+- If your corporate network sits behind a proxy, make sure `npm`/`uv`/`pip` are configured to use it (`npm config set proxy`, `HTTPS_PROXY` env var) before running the install steps above.
+
+## JD Creator
+
+This repo also includes an internal "JD Creator" wizard (Aditya Birla Capital JAE tool) layered on top of the LLM Council chat — see [`JD_CREATOR_PHASE1.md`](JD_CREATOR_PHASE1.md) for what it does and how it's built.
 
 ## Tech Stack
 

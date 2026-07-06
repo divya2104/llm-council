@@ -19,3 +19,6 @@ data/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+
+# Personal Claude Code tool-permission allowlist (session/machine-specific)
+.claude/settings.local.json
