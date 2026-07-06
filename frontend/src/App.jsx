@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
-import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
+import TopNav from './components/TopNav';
+import JdLanding from './components/jd/JdLanding';
+import JdLobDashboard from './components/jd/JdLobDashboard';
+import JdWizard from './components/jd/JdWizard';
+import JdGeneratedPanel from './components/jd/JdGeneratedPanel';
 import { api } from './api';
+import { jdApi } from './jdApi';
 import './App.css';
 
 function App() {
@@ -10,9 +15,17 @@ function App() {
   const [currentConversation, setCurrentConversation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [jdConfig, setJdConfig] = useState(null);
+  const [jdDrafts, setJdDrafts] = useState([]);
+  const [selectedLob, setSelectedLob] = useState(null);
+  const [currentJdDraft, setCurrentJdDraft] = useState(null);
+  const [jdDetailTab, setJdDetailTab] = useState('editor');
+
   // Load conversations on mount
   useEffect(() => {
     loadConversations();
+    loadJdConfig();
+    loadJdDrafts();
   }, []);
 
   // Load conversation details when selected
@@ -40,21 +53,93 @@ function App() {
     }
   };
 
-  const handleNewConversation = async () => {
+  const loadJdConfig = async () => {
     try {
-      const newConv = await api.createConversation();
-      setConversations([
-        { id: newConv.id, created_at: newConv.created_at, message_count: 0 },
-        ...conversations,
-      ]);
-      setCurrentConversationId(newConv.id);
+      const cfg = await jdApi.getConfig();
+      setJdConfig(cfg);
     } catch (error) {
-      console.error('Failed to create conversation:', error);
+      console.error('Failed to load JD config:', error);
     }
   };
 
-  const handleSelectConversation = (id) => {
-    setCurrentConversationId(id);
+  const loadJdDrafts = async () => {
+    try {
+      const drafts = await jdApi.listDrafts();
+      setJdDrafts(drafts);
+    } catch (error) {
+      console.error('Failed to load JD drafts:', error);
+    }
+  };
+
+  const handleSelectLob = (lob) => {
+    setSelectedLob(lob);
+    setCurrentJdDraft(null);
+  };
+
+  const handleBackToLobPicker = () => {
+    setSelectedLob(null);
+  };
+
+  const handleBackToDashboard = () => {
+    setCurrentJdDraft(null);
+  };
+
+  const handleCreateJdForLob = async (lob) => {
+    try {
+      const draft = await jdApi.createDraft(lob);
+      setSelectedLob(lob);
+      setCurrentJdDraft(draft);
+      setJdDetailTab('editor');
+      loadJdDrafts();
+    } catch (error) {
+      console.error('Failed to create JD draft:', error);
+    }
+  };
+
+  const handleSelectJdDraft = async (id) => {
+    try {
+      const draft = await jdApi.getDraft(id);
+      setSelectedLob(draft.lob);
+      setCurrentJdDraft(draft);
+      setJdDetailTab('editor');
+    } catch (error) {
+      console.error('Failed to load JD draft:', error);
+    }
+  };
+
+  const handleJdDraftUpdated = (updatedDraft) => {
+    setCurrentJdDraft(updatedDraft);
+    loadJdDrafts();
+  };
+
+  const handleDeleteJdDraft = async (id) => {
+    try {
+      await jdApi.deleteDraft(id);
+      loadJdDrafts();
+      if (currentJdDraft?.id === id) {
+        setCurrentJdDraft(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete JD draft:', error);
+    }
+  };
+
+  const handleSelectJdDetailTab = async (tab) => {
+    setJdDetailTab(tab);
+    if (tab === 'chat' && currentJdDraft) {
+      try {
+        let conversationId = currentJdDraft.linked_conversation_id;
+        if (!conversationId) {
+          const result = await jdApi.linkConversation(currentJdDraft.id);
+          conversationId = result.conversation_id;
+          setCurrentJdDraft((prev) => ({ ...prev, linked_conversation_id: conversationId }));
+          loadJdDrafts();
+        }
+        setCurrentConversationId(conversationId);
+      } catch (error) {
+        console.error('Failed to link conversation:', error);
+      }
+    }
   };
 
   const handleSendMessage = async (content) => {
@@ -182,18 +267,52 @@ function App() {
   };
 
   return (
-    <div className="app">
-      <Sidebar
-        conversations={conversations}
-        currentConversationId={currentConversationId}
-        onSelectConversation={handleSelectConversation}
-        onNewConversation={handleNewConversation}
-      />
-      <ChatInterface
-        conversation={currentConversation}
-        onSendMessage={handleSendMessage}
-        isLoading={isLoading}
-      />
+    <div className="app-shell">
+      <TopNav />
+      <div className="app">
+        {!selectedLob ? (
+          <JdLanding config={jdConfig} onSelectLob={handleSelectLob} />
+        ) : !currentJdDraft ? (
+          <JdLobDashboard
+            lob={selectedLob}
+            config={jdConfig}
+            drafts={jdDrafts}
+            onSelectDraft={handleSelectJdDraft}
+            onNewDraft={handleCreateJdForLob}
+            onBack={handleBackToLobPicker}
+            onDeleteDraft={handleDeleteJdDraft}
+          />
+        ) : currentJdDraft.status === 'draft' ? (
+          <JdWizard
+            draft={currentJdDraft}
+            config={jdConfig}
+            onDraftUpdated={handleJdDraftUpdated}
+            onBackToDashboard={handleBackToDashboard}
+            onDeleteDraft={handleDeleteJdDraft}
+          />
+        ) : (
+          <JdGeneratedPanel
+            draft={currentJdDraft}
+            activeTab={jdDetailTab}
+            onSelectTab={handleSelectJdDetailTab}
+            onBackToDashboard={handleBackToDashboard}
+          >
+            {jdDetailTab === 'editor' ? (
+              <JdWizard
+                draft={currentJdDraft}
+                config={jdConfig}
+                onDraftUpdated={handleJdDraftUpdated}
+              />
+            ) : (
+              <ChatInterface
+                conversation={currentConversation}
+                onSendMessage={handleSendMessage}
+                isLoading={isLoading}
+              />
+            )}
+          </JdGeneratedPanel>
+        )}
+      </div>
     </div>
   );
 }

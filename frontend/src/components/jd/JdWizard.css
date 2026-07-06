@@ -1,0 +1,621 @@
+.jd-wizard {
+  flex: 1;
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* --- Rail: the signature numbered ladder --- */
+
+.jd-wizard-rail {
+  width: 25%;
+  min-width: 240px;
+  max-width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--rule);
+  background: var(--panel);
+  padding: 24px 20px;
+  overflow-y: auto;
+}
+
+.jd-wizard-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  margin-bottom: 20px;
+  padding: 8px 14px;
+  background: var(--panel);
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.jd-wizard-back-btn svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.jd-wizard-back-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-wash);
+}
+
+/* Shared destructive-action styling: red outline by default, solid red on hover. */
+.jd-danger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--error);
+  color: var(--error);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+}
+
+.jd-danger-btn svg {
+  flex-shrink: 0;
+}
+
+.jd-danger-btn:hover {
+  background: var(--error);
+  color: #fff;
+}
+
+.jd-wizard-rail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin-bottom: 24px;
+}
+
+.jd-wizard-rail-lob-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.jd-wizard-rail-lob {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 4px;
+}
+
+.jd-wizard-rail-lob.accent-amc {
+  color: var(--brand-deep);
+  background: var(--brand-wash);
+}
+
+.jd-wizard-rail-lob.accent-nbfc {
+  color: var(--signal);
+  background: var(--signal-wash);
+}
+
+.jd-wizard-delete-btn {
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.jd-wizard-delete-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.jd-wizard-stepper-id {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.jd-stepper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  gap: 4px;
+  padding-left: 0;
+}
+
+.jd-stepper-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  border-radius: 10px;
+  background: var(--paper);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.jd-stepper-item:hover {
+  background: var(--brand-wash);
+}
+
+.jd-stepper-node {
+  flex-shrink: 0;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1.5px solid var(--rule-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  transition: all 0.15s;
+}
+
+.jd-stepper-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 3px;
+}
+
+.jd-stepper-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  transition: color 0.15s;
+}
+
+.jd-stepper-caption {
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.8;
+  line-height: 1.3;
+}
+
+.jd-stepper-item.completed {
+  background: var(--success-wash);
+}
+
+.jd-stepper-item.completed:hover {
+  background: var(--success-wash);
+}
+
+.jd-stepper-item.completed .jd-stepper-node {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+  font-size: 12px;
+}
+
+.jd-stepper-item.completed .jd-stepper-label {
+  color: var(--ink);
+}
+
+.jd-stepper-item.active {
+  background: var(--brand-wash);
+  box-shadow: inset 0 0 0 1.5px var(--brand);
+}
+
+.jd-stepper-item.active .jd-stepper-node {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--panel);
+  box-shadow: 0 0 0 3px var(--brand-wash);
+}
+
+.jd-stepper-item.active .jd-stepper-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.jd-stepper-item.has-error {
+  background: var(--error-wash);
+}
+
+.jd-stepper-item.has-error .jd-stepper-node {
+  border-color: var(--error);
+  color: var(--error);
+  background: var(--panel);
+}
+
+.jd-stepper-item.has-error .jd-stepper-label {
+  color: var(--error);
+}
+
+/* --- Main column --- */
+
+.jd-wizard-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.jd-wizard-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px;
+  width: 100%;
+  max-width: 1100px;
+}
+
+.jd-step-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.jd-step-title h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 19px;
+}
+
+.jd-badge {
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.jd-badge.non-negotiable {
+  background: var(--error-wash);
+  color: var(--error);
+}
+
+.jd-badge.negotiable {
+  background: var(--brand-wash);
+  color: var(--brand);
+}
+
+.jd-badge.recommended {
+  background: var(--signal-wash);
+  color: var(--signal);
+}
+
+.jd-step-help {
+  color: var(--muted);
+  font-size: 13.5px;
+  margin-bottom: 22px;
+  line-height: 1.6;
+  max-width: 640px;
+}
+
+.jd-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.jd-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.jd-field label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.jd-field input[type="text"],
+.jd-field input[type="date"],
+.jd-field input[type="number"],
+.jd-field select,
+.jd-field textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: var(--font-body);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.jd-field input:focus,
+.jd-field select:focus,
+.jd-field textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-wash);
+}
+
+.jd-field input:disabled {
+  background: var(--paper);
+  color: var(--muted);
+}
+
+.jd-field textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.jd-field.has-error input,
+.jd-field.has-error select,
+.jd-field.has-error textarea {
+  border-color: var(--error);
+}
+
+.jd-field-error {
+  color: var(--error);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.jd-char-counter {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.jd-note {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.jd-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+
+.jd-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 8px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+
+.jd-table td {
+  padding: 6px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+.jd-table input, .jd-table select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: var(--font-body);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.jd-table-remove {
+  background: none;
+  border: none;
+  color: var(--error);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+}
+
+.jd-add-row-btn, .jd-secondary-btn {
+  padding: 8px 14px;
+  background: var(--panel);
+  border: 1px solid var(--brand);
+  border-radius: 3px;
+  color: var(--brand);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.jd-add-row-btn:hover, .jd-secondary-btn:hover {
+  background: var(--brand-wash);
+}
+
+.jd-stub-btn {
+  padding: 8px 14px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  color: var(--muted);
+  cursor: not-allowed;
+  font-size: 13px;
+}
+
+.jd-row-count {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  margin: 4px 0 12px 0;
+}
+
+.jd-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.jd-tag-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--brand-wash);
+  color: var(--brand-deep);
+  border-radius: 2px;
+  font-size: 13px;
+}
+
+.jd-tag-chip button {
+  background: none;
+  border: none;
+  color: var(--brand-deep);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.jd-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.jd-checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.jd-hierarchy-tree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.jd-hierarchy-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.jd-hierarchy-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  width: 160px;
+}
+
+.jd-hierarchy-box.this-role {
+  border-color: var(--brand);
+  background: var(--brand-wash);
+}
+
+.jd-hierarchy-box input {
+  padding: 4px 6px;
+  font-size: 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  font-family: var(--font-body);
+}
+
+.jd-wizard-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  border-top: 1px solid var(--rule);
+  background: var(--panel);
+}
+
+.jd-nav-btn {
+  padding: 10px 20px;
+  border-radius: 3px;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.jd-nav-btn.primary {
+  background: var(--brand);
+  border: 1px solid var(--brand);
+  color: #fff;
+}
+
+.jd-nav-btn.primary:hover {
+  background: var(--brand-deep);
+}
+
+.jd-nav-btn.secondary {
+  background: var(--panel);
+  border: 1px solid var(--rule-strong);
+  color: var(--ink);
+}
+
+.jd-nav-btn.secondary:hover {
+  background: var(--paper);
+}
+
+.jd-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.jd-generate-summary {
+  background: var(--error-wash);
+  border: 1px solid var(--error);
+  border-radius: 3px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  color: var(--error);
+  font-size: 13px;
+}
+
+.jd-generate-summary ul {
+  margin: 6px 0 0 0;
+  padding-left: 20px;
+}
+
+.jd-autosave-status {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.jd-wizard-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.jd-clear-step-btn {
+  padding: 10px 16px;
+  border-radius: 3px;
+  font-size: 13px;
+}

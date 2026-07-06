@@ -1,0 +1,105 @@
+.jd-landing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+  overflow-y: auto;
+}
+
+.jd-landing-intro {
+  margin-bottom: 40px;
+  max-width: 480px;
+}
+
+.jd-landing-eyebrow {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin-bottom: 14px;
+}
+
+.jd-landing h2 {
+  color: var(--ink);
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.jd-landing-subtitle {
+  color: var(--muted);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.jd-lob-cards {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.jd-lob-card {
+  width: 280px;
+  padding: 28px 24px 22px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  text-align: left;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  display: flex;
+  flex-direction: column;
+}
+
+.jd-lob-card:hover {
+  border-color: var(--brand);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -12px rgba(30, 35, 33, 0.25);
+}
+
+.jd-lob-card-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--signal);
+  margin-bottom: 10px;
+}
+
+.jd-lob-card h3 {
+  margin: 0 0 10px 0;
+  color: var(--ink);
+  font-size: 19px;
+}
+
+.jd-lob-card p {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+  min-height: 36px;
+  margin: 0 0 18px 0;
+  flex: 1;
+}
+
+.jd-lob-card-submit {
+  align-self: flex-start;
+  padding: 9px 20px;
+  background: var(--brand);
+  border: 1px solid var(--brand);
+  border-radius: 3px;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.jd-lob-card-submit:hover {
+  background: var(--brand-deep);
+  border-color: var(--brand-deep);
+}

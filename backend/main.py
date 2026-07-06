@@ -11,6 +11,7 @@ import asyncio
 
 from . import storage
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
+from . import jd
 
 app = FastAPI(title="LLM Council API")
 
@@ -28,6 +29,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(jd.router)
 
 
 class CreateConversationRequest(BaseModel):

@@ -1,0 +1,74 @@
+.jd-generated-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.jd-lob-back {
+  background: none;
+  border: none;
+  color: var(--brand);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font-body);
+  padding: 0;
+}
+
+.jd-lob-back:hover {
+  text-decoration: underline;
+}
+
+.jd-generated-banner {
+  padding: 10px 24px;
+  background: var(--success-wash);
+  color: var(--success);
+  font-size: 13px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.jd-detail-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--panel);
+}
+
+.jd-detail-toggle .jd-lob-back {
+  margin-bottom: 0;
+}
+
+.jd-detail-toggle-spacer {
+  flex: 1;
+}
+
+.jd-detail-tab {
+  padding: 6px 14px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.jd-detail-tab:hover {
+  background: var(--paper);
+}
+
+.jd-detail-tab.active {
+  background: var(--brand-wash);
+  border-color: var(--brand);
+  color: var(--brand-deep);
+}
+
+.jd-generated-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
