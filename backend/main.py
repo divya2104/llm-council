@@ -3,13 +3,6 @@
 import sys
 import asyncio
 
-if sys.platform == "win32":
-    # ProactorEventLoop (Windows' asyncio default) has long-standing bugs with SSL
-    # handshakes over IOCP that manifest as "OSError: [WinError 121] The semaphore
-    # timeout period has expired" when connecting to Postgres over sslmode=require.
-    # SelectorEventLoop doesn't have this issue.
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -222,6 +215,20 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
     )
 
 
+def _event_loop_factory(use_subprocess: bool = False) -> asyncio.AbstractEventLoop:
+    # uvicorn 0.36+ picks the event loop via an explicit loop_factory passed to
+    # asyncio.run(), which bypasses asyncio.set_event_loop_policy() entirely — so
+    # that global-policy approach silently has no effect. uvicorn's own "asyncio"
+    # loop factory also hardcodes ProactorEventLoop on win32 regardless of policy.
+    # ProactorEventLoop has long-standing bugs with SSL handshakes over IOCP that
+    # surface as "OSError: [WinError 121] The semaphore timeout period has expired"
+    # when connecting to Postgres over sslmode=require — SelectorEventLoop doesn't
+    # have this issue, so force it explicitly on Windows.
+    if sys.platform == "win32":
+        return asyncio.SelectorEventLoop()
+    return asyncio.new_event_loop()
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8001, loop=_event_loop_factory)
