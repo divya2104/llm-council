@@ -1,5 +1,15 @@
 """FastAPI backend for LLM Council."""
 
+import sys
+import asyncio
+
+if sys.platform == "win32":
+    # ProactorEventLoop (Windows' asyncio default) has long-standing bugs with SSL
+    # handshakes over IOCP that manifest as "OSError: [WinError 121] The semaphore
+    # timeout period has expired" when connecting to Postgres over sslmode=require.
+    # SelectorEventLoop doesn't have this issue.
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +18,6 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 import uuid
 import json
-import asyncio
 
 from . import storage
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
