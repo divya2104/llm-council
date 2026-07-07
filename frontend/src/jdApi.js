@@ -7,6 +7,22 @@ const API_BASE =
     ? 'http://localhost:8001'
     : 'https://llm-council-containerapp.nicedesert-691670aa.southindia.azurecontainerapps.io';
 
+async function downloadFile(url, filename, errorMessage) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(errorMessage);
+  }
+  const blob = await response.blob();
+  const objectUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(objectUrl);
+}
+
 export const jdApi = {
   /** Get dropdown options / thresholds / step order. */
   async getConfig() {
@@ -111,6 +127,32 @@ export const jdApi = {
     );
     if (!response.ok) {
       throw new Error('Failed to link conversation');
+    }
+    return response.json();
+  },
+
+  /** Download a blank Excel template for offline JD authoring. */
+  async downloadTemplate(lob) {
+    await downloadFile(`${API_BASE}/api/jd/template?lob=${encodeURIComponent(lob)}`, `JD-Template-${lob}.xlsx`, 'Failed to download JD template');
+  },
+
+  /** Download a fully-filled example Excel template. */
+  async downloadSampleTemplate(lob) {
+    await downloadFile(`${API_BASE}/api/jd/sample-template?lob=${encodeURIComponent(lob)}`, `JD-Sample-${lob}.xlsx`, 'Failed to download sample JD template');
+  },
+
+  /** Create a new JD draft pre-filled from an uploaded Excel template. */
+  async uploadDraft(lob, file) {
+    const formData = new FormData();
+    formData.append('lob', lob);
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE}/api/jd/drafts/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      throw new Error(errorBody.detail || 'Failed to upload JD template');
     }
     return response.json();
   },

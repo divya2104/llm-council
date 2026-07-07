@@ -21,7 +21,7 @@ export default function JdLanding({ config, onSelectLob }) {
             <h3>{labels[lob] || lob}</h3>
             <p>{descriptions[lob]}</p>
             <button className="jd-lob-card-submit" onClick={() => onSelectLob(lob)}>
-              Submit
+              Select
             </button>
           </div>
         ))}

@@ -96,6 +96,31 @@ function App() {
     }
   };
 
+  const handleDownloadJdTemplate = async (lob) => {
+    try {
+      await jdApi.downloadTemplate(lob);
+    } catch (error) {
+      console.error('Failed to download JD template:', error);
+    }
+  };
+
+  const handleDownloadJdSampleTemplate = async (lob) => {
+    try {
+      await jdApi.downloadSampleTemplate(lob);
+    } catch (error) {
+      console.error('Failed to download JD sample template:', error);
+    }
+  };
+
+  const handleUploadJdForLob = async (lob, file) => {
+    const { draft, warnings } = await jdApi.uploadDraft(lob, file);
+    setSelectedLob(lob);
+    setCurrentJdDraft(draft);
+    setJdDetailTab('editor');
+    loadJdDrafts();
+    return warnings;
+  };
+
   const handleSelectJdDraft = async (id) => {
     try {
       const draft = await jdApi.getDraft(id);
@@ -279,6 +304,9 @@ function App() {
             drafts={jdDrafts}
             onSelectDraft={handleSelectJdDraft}
             onNewDraft={handleCreateJdForLob}
+            onDownloadTemplate={handleDownloadJdTemplate}
+            onDownloadSampleTemplate={handleDownloadJdSampleTemplate}
+            onUploadDraft={handleUploadJdForLob}
             onBack={handleBackToLobPicker}
             onDeleteDraft={handleDeleteJdDraft}
           />

@@ -1,7 +1,12 @@
 """Configuration constants for the JD Creator wizard."""
 
-# Data directory for JD draft storage
-JD_DATA_DIR = "data/jd_drafts"
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Postgres connection string for JD draft storage (see .env.example)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Lines of Business
 LOB_OPTIONS = ["AMC", "NBFC"]

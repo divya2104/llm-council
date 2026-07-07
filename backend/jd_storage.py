@@ -1,49 +1,32 @@
-"""JSON-based storage for JD Creator drafts."""
+"""Postgres-backed storage for JD Creator drafts."""
 
-import json
-import os
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from pathlib import Path
-from .jd_config import JD_DATA_DIR
 
-
-def ensure_jd_data_dir():
-    """Ensure the JD data directory exists."""
-    Path(JD_DATA_DIR).mkdir(parents=True, exist_ok=True)
-
-
-def get_jd_path(jd_id: str) -> str:
-    """Get the file path for a JD draft."""
-    return os.path.join(JD_DATA_DIR, f"{jd_id}.json")
+from . import jd_db
 
 
 def _empty_hierarchy_box():
     return {"title": "", "band": ""}
 
 
-_COUNTER_FILE_NAME = "_jd_number_counter.txt"
-
-
-def _next_jd_number(lob: str) -> str:
+async def _next_jd_number(lob: str) -> str:
     """Generate the next human-readable tracking id, e.g. JD-AMC-00001.
 
-    Backed by a small counter file so ids stay unique and monotonically
-    increasing even if drafts are later deleted.
+    Backed by an atomic upsert-and-increment on jd_number_counters, so ids
+    stay unique even under concurrent draft creation.
     """
-    ensure_jd_data_dir()
-    counter_path = os.path.join(JD_DATA_DIR, _COUNTER_FILE_NAME)
-
-    last = 0
-    if os.path.exists(counter_path):
-        with open(counter_path, 'r') as f:
-            last = json.load(f).get("last", 0)
-
-    next_value = last + 1
-    with open(counter_path, 'w') as f:
-        json.dump({"last": next_value}, f)
-
-    return f"JD-{lob}-{next_value:05d}"
+    pool = jd_db.get_pool()
+    row = await pool.fetchrow(
+        """
+        INSERT INTO jd_number_counters (lob, last_value)
+        VALUES ($1, 1)
+        ON CONFLICT (lob) DO UPDATE SET last_value = jd_number_counters.last_value + 1
+        RETURNING last_value
+        """,
+        lob,
+    )
+    return f"JD-{lob}-{row['last_value']:05d}"
 
 
 def _new_draft_shape(jd_id: str, lob: str, jd_number: str = None) -> Dict[str, Any]:
@@ -144,28 +127,37 @@ def _new_draft_shape(jd_id: str, lob: str, jd_number: str = None) -> Dict[str, A
     }
 
 
-def create_jd_draft(jd_id: str, lob: str) -> Dict[str, Any]:
-    """Create a new JD draft and persist it."""
-    ensure_jd_data_dir()
+def _draft_title(draft: Dict[str, Any]) -> str:
+    return draft.get("basics", {}).get("poornata_position_title") or "Untitled JD"
 
-    jd_number = _next_jd_number(lob)
+
+async def create_jd_draft(jd_id: str, lob: str) -> Dict[str, Any]:
+    """Create a new JD draft and persist it."""
+    jd_number = await _next_jd_number(lob)
     draft = _new_draft_shape(jd_id, lob, jd_number)
 
-    path = get_jd_path(jd_id)
-    with open(path, 'w') as f:
-        json.dump(draft, f, indent=2)
+    pool = jd_db.get_pool()
+    created_at = datetime.fromisoformat(draft["created_at"])
+    await pool.execute(
+        """
+        INSERT INTO jd_drafts
+            (id, jd_number, lob, status, title, prepared_by_name,
+             linked_conversation_id, created_at, updated_at, data)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        """,
+        jd_id, jd_number, lob, draft["status"], _draft_title(draft),
+        draft["sign_off"]["prepared_by_name"], draft["linked_conversation_id"],
+        created_at, created_at, draft,
+    )
 
     return draft
 
 
-def delete_jd_draft(jd_id: str) -> bool:
+async def delete_jd_draft(jd_id: str) -> bool:
     """Delete a JD draft from storage. Returns False if it didn't exist."""
-    path = get_jd_path(jd_id)
-    if not os.path.exists(path):
-        return False
-
-    os.remove(path)
-    return True
+    pool = jd_db.get_pool()
+    result = await pool.execute("DELETE FROM jd_drafts WHERE id = $1", jd_id)
+    return result != "DELETE 0"
 
 
 def default_step_value(step_key: str, lob: str) -> Any:
@@ -174,26 +166,32 @@ def default_step_value(step_key: str, lob: str) -> Any:
     return fresh.get(step_key)
 
 
-def get_jd_draft(jd_id: str) -> Optional[Dict[str, Any]]:
+async def get_jd_draft(jd_id: str) -> Optional[Dict[str, Any]]:
     """Load a JD draft from storage."""
-    path = get_jd_path(jd_id)
-
-    if not os.path.exists(path):
+    pool = jd_db.get_pool()
+    row = await pool.fetchrow("SELECT data FROM jd_drafts WHERE id = $1", jd_id)
+    if row is None:
         return None
-
-    with open(path, 'r') as f:
-        return json.load(f)
+    return row["data"]
 
 
-def save_jd_draft(draft: Dict[str, Any]):
+async def save_jd_draft(draft: Dict[str, Any]):
     """Save a JD draft to storage, bumping updated_at."""
-    ensure_jd_data_dir()
-
     draft["updated_at"] = datetime.utcnow().isoformat()
 
-    path = get_jd_path(draft['id'])
-    with open(path, 'w') as f:
-        json.dump(draft, f, indent=2)
+    pool = jd_db.get_pool()
+    await pool.execute(
+        """
+        UPDATE jd_drafts
+        SET jd_number = $1, lob = $2, status = $3, title = $4, prepared_by_name = $5,
+            linked_conversation_id = $6, updated_at = $7, data = $8
+        WHERE id = $9
+        """,
+        draft.get("jd_number"), draft["lob"], draft["status"], _draft_title(draft),
+        draft.get("sign_off", {}).get("prepared_by_name", ""),
+        draft.get("linked_conversation_id"),
+        datetime.fromisoformat(draft["updated_at"]), draft, draft["id"],
+    )
 
 
 def _calculate_completion_percent(draft: Dict[str, Any]) -> int:
@@ -262,68 +260,96 @@ def _calculate_completion_percent(draft: Dict[str, Any]) -> int:
     return round((complete / total_steps) * 100)
 
 
-def list_jd_drafts() -> List[Dict[str, Any]]:
+async def list_jd_drafts() -> List[Dict[str, Any]]:
     """List all JD drafts (metadata only)."""
-    ensure_jd_data_dir()
+    pool = jd_db.get_pool()
+    rows = await pool.fetch(
+        """
+        SELECT id, jd_number, lob, status, title, prepared_by_name,
+               linked_conversation_id, created_at, updated_at, data
+        FROM jd_drafts
+        ORDER BY updated_at DESC
+        """
+    )
 
     drafts = []
-    for filename in os.listdir(JD_DATA_DIR):
-        if filename.endswith('.json'):
-            path = os.path.join(JD_DATA_DIR, filename)
-            with open(path, 'r') as f:
-                data = json.load(f)
-                drafts.append({
-                    "id": data["id"],
-                    "jd_number": data.get("jd_number"),
-                    "lob": data.get("lob"),
-                    "business": data.get("basics", {}).get("business", ""),
-                    "status": data.get("status", "draft"),
-                    "title": data.get("basics", {}).get("poornata_position_title") or "Untitled JD",
-                    "created_at": data["created_at"],
-                    "updated_at": data.get("updated_at", data["created_at"]),
-                    "linked_conversation_id": data.get("linked_conversation_id"),
-                    "prepared_by_name": data.get("sign_off", {}).get("prepared_by_name", ""),
-                    "completion_percent": 100 if data.get("status") == "generated" else _calculate_completion_percent(data),
-                })
-
-    drafts.sort(key=lambda x: x["updated_at"], reverse=True)
+    for row in rows:
+        data = row["data"]
+        drafts.append({
+            "id": str(row["id"]),
+            "jd_number": row["jd_number"],
+            "lob": row["lob"],
+            "business": data.get("basics", {}).get("business", ""),
+            "status": row["status"],
+            "title": row["title"],
+            "created_at": row["created_at"].isoformat(),
+            "updated_at": row["updated_at"].isoformat(),
+            "linked_conversation_id": row["linked_conversation_id"],
+            "prepared_by_name": row["prepared_by_name"],
+            "completion_percent": 100 if row["status"] == "generated" else _calculate_completion_percent(data),
+        })
 
     return drafts
 
 
-def update_jd_step(jd_id: str, step_key: str, step_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+async def update_jd_step(jd_id: str, step_key: str, step_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Merge new data into a specific step section of a draft and save."""
-    draft = get_jd_draft(jd_id)
+    draft = await get_jd_draft(jd_id)
     if draft is None:
         return None
 
     draft[step_key] = step_data
-    save_jd_draft(draft)
+    await save_jd_draft(draft)
 
     return draft
 
 
-def set_jd_status(jd_id: str, status: str, generated_result: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+async def set_jd_status(jd_id: str, status: str, generated_result: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
     """Transition a draft's status (e.g. draft -> generated)."""
-    draft = get_jd_draft(jd_id)
+    draft = await get_jd_draft(jd_id)
     if draft is None:
         return None
 
     draft["status"] = status
     if generated_result is not None:
         draft["generated_result"] = generated_result
-    save_jd_draft(draft)
+    await save_jd_draft(draft)
 
     return draft
 
 
-def link_conversation(jd_id: str, conversation_id: str) -> Optional[Dict[str, Any]]:
+async def link_conversation(jd_id: str, conversation_id: str) -> Optional[Dict[str, Any]]:
     """Link a JD draft to a council conversation id."""
-    draft = get_jd_draft(jd_id)
+    draft = await get_jd_draft(jd_id)
     if draft is None:
         return None
 
     draft["linked_conversation_id"] = conversation_id
-    save_jd_draft(draft)
+    await save_jd_draft(draft)
 
     return draft
+
+
+async def get_sample_template(lob: str) -> Optional[Dict[str, Any]]:
+    """Load a stored sample (fully-filled) template for a LOB, if one has been generated yet."""
+    pool = jd_db.get_pool()
+    row = await pool.fetchrow(
+        "SELECT filename, content FROM jd_sample_templates WHERE lob = $1", lob
+    )
+    if row is None:
+        return None
+    return {"filename": row["filename"], "content": row["content"]}
+
+
+async def save_sample_template(lob: str, filename: str, content: bytes):
+    """Persist a generated sample template so future downloads don't regenerate it."""
+    pool = jd_db.get_pool()
+    await pool.execute(
+        """
+        INSERT INTO jd_sample_templates (lob, filename, content, updated_at)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (lob) DO UPDATE
+        SET filename = $2, content = $3, updated_at = $4
+        """,
+        lob, filename, content, datetime.utcnow(),
+    )

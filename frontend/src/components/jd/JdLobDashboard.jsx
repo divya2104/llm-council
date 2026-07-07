@@ -139,6 +139,24 @@ function SearchIcon() {
   );
 }
 
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v12M7 10l5 5 5-5" />
+      <path d="M4 19h16" />
+    </svg>
+  );
+}
+
+function UploadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 21V9M7 14l5-5 5 5" />
+      <path d="M4 19h16" />
+    </svg>
+  );
+}
+
 function DraftListIcon({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -193,11 +211,13 @@ function JdStatusSection({ title, tone, count, emptyText, drafts, onSelectDraft,
   );
 }
 
-export default function JdLobDashboard({ lob, config, drafts, onSelectDraft, onNewDraft, onBack, onDeleteDraft }) {
+export default function JdLobDashboard({ lob, config, drafts, onSelectDraft, onNewDraft, onDownloadTemplate, onDownloadSampleTemplate, onUploadDraft, onBack, onDeleteDraft }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadNotice, setUploadNotice] = useState(null);
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -207,6 +227,25 @@ export default function JdLobDashboard({ lob, config, drafts, onSelectDraft, onN
       setDeleteTarget(null);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadNotice(null);
+    try {
+      const warnings = await onUploadDraft(lob, file);
+      if (warnings?.length) {
+        setUploadNotice({ tone: 'warning', text: warnings.join(' ') });
+      }
+    } catch (error) {
+      setUploadNotice({ tone: 'error', text: error.message || 'Failed to upload JD template.' });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -238,9 +277,8 @@ export default function JdLobDashboard({ lob, config, drafts, onSelectDraft, onN
 
       <div className="jd-lob-hero">
         <div className="jd-lob-hero-copy">
-          <span className="jd-lob-eyebrow">{lob} · Job Descriptions</span>
           <h2>{label}</h2>
-          {description && <p className="jd-lob-hero-subtitle">{description}</p>}
+          {description && <p className="jd-lob-hero-subtitle">{description} - {lob} Job Descriptions</p>}
         </div>
 
         <div className="jd-lob-hero-actions">
@@ -266,6 +304,28 @@ export default function JdLobDashboard({ lob, config, drafts, onSelectDraft, onN
             <option value="generated">Completed only</option>
           </select>
 
+          <button className="jd-lob-template-btn" onClick={() => onDownloadTemplate(lob)}>
+            <DownloadIcon />
+            Download Template
+          </button>
+
+          <button className="jd-lob-template-btn" onClick={() => onDownloadSampleTemplate(lob)}>
+            <DownloadIcon />
+            Download Sample (Filled)
+          </button>
+
+          <label className="jd-lob-template-btn jd-lob-upload-btn">
+            <UploadIcon />
+            {isUploading ? 'Uploading…' : 'Upload Filled Template'}
+            <input
+              type="file"
+              accept=".xlsx"
+              onChange={handleFileSelected}
+              disabled={isUploading}
+              hidden
+            />
+          </label>
+
           <button className="jd-lob-new-btn" onClick={() => onNewDraft(lob)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <path d="M12 5v14M5 12h14" />
@@ -274,6 +334,13 @@ export default function JdLobDashboard({ lob, config, drafts, onSelectDraft, onN
           </button>
         </div>
       </div>
+
+      {uploadNotice && (
+        <div className={`jd-lob-upload-notice tone-${uploadNotice.tone}`}>
+          {uploadNotice.text}
+          <button className="jd-lob-upload-notice-close" onClick={() => setUploadNotice(null)} aria-label="Dismiss">×</button>
+        </div>
+      )}
 
       {showDrafts && (
         <JdStatusSection

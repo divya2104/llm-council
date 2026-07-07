@@ -38,24 +38,6 @@
   max-width: 560px;
 }
 
-.jd-lob-eyebrow {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  margin-bottom: 14px;
-}
-
-.jd-lob-dashboard.accent-amc .jd-lob-eyebrow {
-  color: var(--brand);
-}
-
-.jd-lob-dashboard.accent-nbfc .jd-lob-eyebrow {
-  color: var(--signal);
-}
-
 .jd-lob-hero-copy h2 {
   margin: 0 0 10px 0;
   color: var(--ink);
@@ -165,6 +147,78 @@
   background: var(--brand-deep);
   transform: translateY(-1px);
   box-shadow: 0 14px 24px -12px rgba(20, 131, 196, 0.6);
+}
+
+.jd-lob-template-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 42px;
+  padding: 0 18px;
+  background: var(--panel);
+  border: 1px solid var(--rule-strong);
+  border-radius: 5px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.jd-lob-template-btn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.jd-lob-template-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.jd-lob-upload-btn:has(input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.jd-lob-upload-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.jd-lob-upload-notice.tone-warning {
+  background: var(--warning-wash);
+  color: var(--warning);
+}
+
+.jd-lob-upload-notice.tone-error {
+  background: var(--error-wash);
+  color: var(--error);
+}
+
+.jd-lob-upload-notice-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.jd-lob-upload-notice-close:hover {
+  opacity: 1;
 }
 
 /* --- Status sections --- */

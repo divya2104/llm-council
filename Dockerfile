@@ -12,7 +12,10 @@ RUN pip install \
     "uvicorn[standard]" \
     python-dotenv \
     httpx \
-    pydantic
+    pydantic \
+    asyncpg \
+    openpyxl \
+    python-multipart
 
 EXPOSE 8000
 

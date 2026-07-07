@@ -170,3 +170,13 @@ export function validateFullDraftForGenerate(draft, config = {}) {
   });
   return { valid: Object.keys(stepErrors).length === 0, stepErrors };
 }
+
+/** Per-step completion (including the negotiable "dimensions" step, which is always complete)
+ * for driving the stepper's green/yellow state — independent of navigation history. */
+export function getStepCompletionMap(draft, config = {}) {
+  const map = {};
+  Object.keys(STEP_VALIDATORS).forEach((stepKey) => {
+    map[stepKey] = STEP_VALIDATORS[stepKey](draft, config).valid;
+  });
+  return map;
+}

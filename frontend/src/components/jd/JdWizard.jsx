@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { jdApi } from '../../jdApi';
-import { validateFullDraftForGenerate } from './JdValidation';
+import { validateFullDraftForGenerate, getStepCompletionMap } from './JdValidation';
 import JdConfirmDialog from './JdConfirmDialog';
 import JdStepBasics from './JdStepBasics';
 import JdStepPurpose from './JdStepPurpose';
@@ -36,6 +36,15 @@ const STEP_CAPTIONS = {
   sign_off: 'Review & submit',
 };
 
+function IncompleteStepIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 6h12M8 12h12M8 18h12" />
+      <path d="M3 6h.01M3 12h.01M3 18h.01" />
+    </svg>
+  );
+}
+
 export default function JdWizard({ draft, config, onDraftUpdated, onBackToDashboard, onDeleteDraft }) {
   const [localDraft, setLocalDraft] = useState(draft);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -47,6 +56,7 @@ export default function JdWizard({ draft, config, onDraftUpdated, onBackToDashbo
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   const saveTimerRef = useRef(null);
   const pendingStepRef = useRef(null);
@@ -81,6 +91,7 @@ export default function JdWizard({ draft, config, onDraftUpdated, onBackToDashbo
   const { stepErrors: fullStepErrors } = validateFullDraftForGenerate(localDraft, config || {});
   // Fields only turn red once the user has actually tried to submit at Sign-Off.
   const stepErrors = hasAttemptedSubmit ? fullStepErrors : {};
+  const stepCompletionMap = getStepCompletionMap(localDraft, config || {});
 
   const flushSave = async (stepKey) => {
     if (saveTimerRef.current) {
@@ -137,6 +148,15 @@ export default function JdWizard({ draft, config, onDraftUpdated, onBackToDashbo
       setGenerateError(err.details?.errors || { general: ['Failed to generate JD'] });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setIsSavingDraft(true);
+    try {
+      await flushSave(currentStep.key);
+    } finally {
+      setIsSavingDraft(false);
     }
   };
 
@@ -221,40 +241,49 @@ export default function JdWizard({ draft, config, onDraftUpdated, onBackToDashbo
           )}
         </div>
 
-        {localDraft.jd_number && <div className="jd-wizard-stepper-id">{localDraft.jd_number}</div>}
-
         <div className="jd-stepper">
-          {steps.map((step, idx) => (
-            <div
-              key={step.key}
-              className={`jd-stepper-item ${idx === currentStepIndex ? 'active' : ''} ${
-                idx < currentStepIndex ? 'completed' : ''
-              } ${stepErrors[step.key] ? 'has-error' : ''}`}
-              onClick={() => goToStep(idx)}
-            >
-              <span className="jd-stepper-node">{idx < currentStepIndex ? '✓' : idx + 1}</span>
-              <span className="jd-stepper-text">
-                <span className="jd-stepper-label">{step.label}</span>
-                <span className="jd-stepper-caption">{STEP_CAPTIONS[step.key]}</span>
-              </span>
-            </div>
-          ))}
+          {steps.map((step, idx) => {
+            const isComplete = !!stepCompletionMap[step.key];
+            return (
+              <div
+                key={step.key}
+                className={`jd-stepper-item ${idx === currentStepIndex ? 'active' : ''} ${
+                  isComplete ? 'completed' : 'incomplete'
+                } ${stepErrors[step.key] ? 'has-error' : ''}`}
+                onClick={() => goToStep(idx)}
+              >
+                <span className="jd-stepper-node">
+                  {isComplete ? '✓' : <IncompleteStepIcon />}
+                </span>
+                <span className="jd-stepper-text">
+                  <span className="jd-stepper-label">{step.label}</span>
+                  <span className="jd-stepper-caption">{STEP_CAPTIONS[step.key]}</span>
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div className="jd-wizard-main">
         <div className="jd-wizard-body">
+          {localDraft.jd_number && <div className="jd-wizard-body-id">{localDraft.jd_number}</div>}
           <StepComponent {...stepProps} />
         </div>
 
         <div className="jd-wizard-footer">
-          <button className="jd-nav-btn secondary" onClick={handlePrev} disabled={currentStepIndex === 0}>
-            ← Back
-          </button>
-          <span className="jd-autosave-status">{saveStatus}</span>
-          <div className="jd-wizard-footer-right">
+          <div className="jd-wizard-footer-left">
+            <button className="jd-nav-btn secondary" onClick={handlePrev} disabled={currentStepIndex === 0}>
+              ← Back
+            </button>
             <button className="jd-danger-btn jd-clear-step-btn" onClick={() => setConfirmClearOpen(true)}>
               Clear content
+            </button>
+          </div>
+          <span className="jd-autosave-status">{saveStatus}</span>
+          <div className="jd-wizard-footer-right">
+            <button className="jd-nav-btn save-draft" onClick={handleSaveDraft} disabled={isSavingDraft}>
+              {isSavingDraft ? 'Saving…' : 'Save Draft'}
             </button>
             {currentStepIndex < steps.length - 1 && (
               <button className="jd-nav-btn primary" onClick={handleNext}>
