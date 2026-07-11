@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-from . import jd_config, jd_db
+from . import jd_config, jd_db, jd_local_storage
 
 REQUIRED_BASICS_FIELDS = [
     "business", "unit", "location", "poornata_position_number",
@@ -103,8 +103,11 @@ async def _next_jd_number(lob: str) -> str:
     """Generate the next human-readable tracking id, e.g. JD-AMC-00001.
 
     Backed by an atomic upsert-and-increment on jd_number_counters, so ids
-    stay unique even under concurrent draft creation.
+    stay unique even under concurrent draft creation. Falls back to a
+    local-only counter (JD-{lob}-LOCAL-{n}) when Postgres is unreachable.
     """
+    if not jd_db.is_db_available():
+        return jd_local_storage.next_jd_number(lob)
     pool = jd_db.get_pool()
     row = await pool.fetchrow(
         """
@@ -225,6 +228,10 @@ async def create_jd_draft(jd_id: str, lob: str) -> Dict[str, Any]:
     jd_number = await _next_jd_number(lob)
     draft = _new_draft_shape(jd_id, lob, jd_number)
 
+    if not jd_db.is_db_available():
+        jd_local_storage.write_draft(draft)
+        return draft
+
     pool = jd_db.get_pool()
     created_at = datetime.fromisoformat(draft["created_at"])
     await pool.execute(
@@ -244,6 +251,8 @@ async def create_jd_draft(jd_id: str, lob: str) -> Dict[str, Any]:
 
 async def delete_jd_draft(jd_id: str) -> bool:
     """Delete a JD draft from storage. Returns False if it didn't exist."""
+    if not jd_db.is_db_available():
+        return jd_local_storage.delete_draft(jd_id)
     pool = jd_db.get_pool()
     result = await pool.execute("DELETE FROM jd_drafts WHERE id = $1", jd_id)
     return result != "DELETE 0"
@@ -257,6 +266,8 @@ def default_step_value(step_key: str, lob: str) -> Any:
 
 async def get_jd_draft(jd_id: str) -> Optional[Dict[str, Any]]:
     """Load a JD draft from storage."""
+    if not jd_db.is_db_available():
+        return jd_local_storage.load_draft(jd_id)
     pool = jd_db.get_pool()
     row = await pool.fetchrow("SELECT data FROM jd_drafts WHERE id = $1", jd_id)
     if row is None:
@@ -267,6 +278,10 @@ async def get_jd_draft(jd_id: str) -> Optional[Dict[str, Any]]:
 async def save_jd_draft(draft: Dict[str, Any]):
     """Save a JD draft to storage, bumping updated_at."""
     draft["updated_at"] = datetime.utcnow().isoformat()
+
+    if not jd_db.is_db_available():
+        jd_local_storage.write_draft(draft)
+        return
 
     pool = jd_db.get_pool()
     await pool.execute(
@@ -298,8 +313,30 @@ def _calculate_completion_percent(draft: Dict[str, Any]) -> int:
     return round((complete / total_steps) * 100)
 
 
+def _draft_metadata(draft: Dict[str, Any]) -> Dict[str, Any]:
+    """Build the list-view metadata shape for a locally-stored draft dict."""
+    return {
+        "id": draft["id"],
+        "jd_number": draft.get("jd_number"),
+        "lob": draft["lob"],
+        "business": draft.get("basics", {}).get("business", ""),
+        "status": draft["status"],
+        "title": _draft_title(draft),
+        "created_at": draft["created_at"],
+        "updated_at": draft["updated_at"],
+        "linked_conversation_id": draft.get("linked_conversation_id"),
+        "prepared_by_name": draft.get("sign_off", {}).get("prepared_by_name", ""),
+        "completion_percent": 100 if draft["status"] == "generated" else _calculate_completion_percent(draft),
+    }
+
+
 async def list_jd_drafts() -> List[Dict[str, Any]]:
     """List all JD drafts (metadata only)."""
+    if not jd_db.is_db_available():
+        drafts = [_draft_metadata(d) for d in jd_local_storage.list_draft_files()]
+        drafts.sort(key=lambda d: d["updated_at"], reverse=True)
+        return drafts
+
     pool = jd_db.get_pool()
     rows = await pool.fetch(
         """
@@ -370,6 +407,8 @@ async def link_conversation(jd_id: str, conversation_id: str) -> Optional[Dict[s
 
 async def get_sample_template(lob: str) -> Optional[Dict[str, Any]]:
     """Load a stored sample (fully-filled) template for a LOB, if one has been generated yet."""
+    if not jd_db.is_db_available():
+        return None  # not cached in local mode; caller regenerates on every request
     pool = jd_db.get_pool()
     row = await pool.fetchrow(
         "SELECT filename, content FROM jd_sample_templates WHERE lob = $1", lob
@@ -381,6 +420,8 @@ async def get_sample_template(lob: str) -> Optional[Dict[str, Any]]:
 
 async def save_sample_template(lob: str, filename: str, content: bytes):
     """Persist a generated sample template so future downloads don't regenerate it."""
+    if not jd_db.is_db_available():
+        return  # no-op in local mode
     pool = jd_db.get_pool()
     await pool.execute(
         """
