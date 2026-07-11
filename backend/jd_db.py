@@ -5,6 +5,7 @@ import asyncpg
 from . import jd_config
 
 _pool: asyncpg.Pool = None
+_db_available = False
 
 
 async def _init_connection(conn):
@@ -47,18 +48,39 @@ CREATE TABLE IF NOT EXISTS jd_sample_templates (
 
 
 async def init_pool():
-    """Create the connection pool and bootstrap the schema. Called on app startup."""
-    global _pool
+    """Try to create the connection pool and bootstrap the schema. Called on app startup.
+
+    Does NOT raise if Postgres is unreachable — sets is_db_available() to
+    False instead, so the app boots in local-storage fallback mode (see
+    jd_local_storage.py and JD_CREATOR_PHASE1_WINDOWS_SSL_DEBUG.md). Catches
+    broadly (not just OSError) since the goal is "any connection problem ->
+    fall back," whether that's a network block, bad credentials, or a typo
+    in DATABASE_URL.
+    """
+    # ponytail: availability is decided once at startup, no background
+    # reconnect loop. If Postgres comes back mid-session, restart the
+    # process — add a periodic recheck only if that restart step becomes
+    # a real pain point in practice.
+    global _pool, _db_available
     if not jd_config.DATABASE_URL:
-        raise RuntimeError(
-            "DATABASE_URL is not set. JD Creator storage requires a Postgres "
-            "connection string in .env (see .env.example)."
+        print("[jd_db] DATABASE_URL not set — running in local-storage fallback mode.")
+        _db_available = False
+        return
+    try:
+        _pool = await asyncpg.create_pool(
+            jd_config.DATABASE_URL, min_size=1, max_size=5, init=_init_connection, timeout=15
         )
-    _pool = await asyncpg.create_pool(
-        jd_config.DATABASE_URL, min_size=1, max_size=5, init=_init_connection
-    )
-    async with _pool.acquire() as conn:
-        await conn.execute(_SCHEMA)
+        async with _pool.acquire() as conn:
+            await conn.execute(_SCHEMA)
+        _db_available = True
+    except Exception as e:
+        print(f"[jd_db] Could not connect to Postgres ({e!r}) — running in local-storage fallback mode.")
+        _pool = None
+        _db_available = False
+
+
+def is_db_available() -> bool:
+    return _db_available
 
 
 async def close_pool():
