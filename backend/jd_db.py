@@ -75,6 +75,8 @@ async def init_pool():
         _db_available = True
     except Exception as e:
         print(f"[jd_db] Could not connect to Postgres ({e!r}) — running in local-storage fallback mode.")
+        if _pool is not None:
+            await _pool.close()
         _pool = None
         _db_available = False
 
