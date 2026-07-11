@@ -47,6 +47,7 @@ async def main():
     for draft in local_drafts:
         old_number = draft.get("jd_number")
         new_number = await jd_storage._next_jd_number(draft["lob"])
+        draft["jd_number"] = new_number
 
         await pool.execute(
             """
