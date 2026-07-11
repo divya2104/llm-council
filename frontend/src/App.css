@@ -10,6 +10,14 @@
   overflow: hidden;
 }
 
+.jd-offline-banner {
+  padding: 10px 24px;
+  background: var(--warning-wash);
+  color: var(--warning);
+  font-size: 13px;
+  border-bottom: 1px solid var(--rule);
+}
+
 .app {
   display: flex;
   flex: 1;

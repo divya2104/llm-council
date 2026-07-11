@@ -294,6 +294,11 @@ function App() {
   return (
     <div className="app-shell">
       <TopNav />
+      {jdConfig && !jdConfig.db_available && (
+        <div className="jd-offline-banner">
+          Working offline — DB connection unavailable. Drafts are saved locally on this machine and need to be synced once the connection is fixed.
+        </div>
+      )}
       <div className="app">
         {!selectedLob ? (
           <JdLanding config={jdConfig} onSelectLob={handleSelectLob} />
