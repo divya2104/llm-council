@@ -33,8 +33,9 @@ def load_database_url() -> str:
 def attempt(host: str, port: int, label: str, min_version, max_version) -> None:
     print(f"\n--- {label} ---")
     try:
-        sock = socket.create_connection((host, port), timeout=10)
-        print("TCP connect: OK")
+        sock = socket.create_connection((host, port), timeout=25)
+        peer_ip, peer_port = sock.getpeername()
+        print(f"TCP connect: OK — peer {peer_ip}:{peer_port}")
 
         # Postgres SSLRequest preamble: 4-byte length (8) + magic code 80877103
         sock.sendall(struct.pack("!ii", 8, 80877103))
