@@ -8,6 +8,9 @@ load_dotenv()
 # Postgres connection string for JD draft storage (see .env.example)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Local JSON-file fallback storage for JD drafts, used when Postgres is unreachable
+LOCAL_DRAFTS_DIR = "data/jd_drafts_local"
+
 # Lines of Business
 LOB_OPTIONS = ["AMC", "NBFC"]
 
