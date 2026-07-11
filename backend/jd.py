@@ -11,6 +11,7 @@ from . import jd_storage
 from . import storage
 from . import jd_config
 from . import jd_excel
+from . import jd_db
 
 router = APIRouter(prefix="/api/jd")
 
@@ -47,6 +48,7 @@ async def get_jd_config():
         "job_purpose_max_chars": jd_config.JOB_PURPOSE_MAX_CHARS,
         "job_context_min_chars": jd_config.JOB_CONTEXT_MIN_CHARS,
         "wizard_steps": jd_config.WIZARD_STEPS,
+        "db_available": jd_db.is_db_available(),
     }
 
 
