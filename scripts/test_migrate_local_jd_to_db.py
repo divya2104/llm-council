@@ -29,8 +29,7 @@ def main():
         "updated_at": "2026-07-12T11:00:00",
     }
 
-    draft["jd_number"] = "JD-AMC-00042"
-    args = migrate._insert_args(draft, "JD-AMC-00042")
+    args = migrate._prepare_migration(draft, "JD-AMC-00042")
 
     assert args[0] == "abc123"
     assert args[1] == "JD-AMC-00042"
@@ -41,6 +40,7 @@ def main():
     assert args[6] is None
     assert args[9] == draft
     assert args[9]["jd_number"] == "JD-AMC-00042"
+    assert draft["jd_number"] == "JD-AMC-00042"
     assert len(args) == 10
 
     print("OK: migration script builds INSERT args in the correct column order")

@@ -32,6 +32,14 @@ def _insert_args(draft: dict, new_number: str) -> tuple:
     )
 
 
+def _prepare_migration(draft: dict, new_number: str) -> tuple:
+    """Stamp the real jd_number onto the draft's embedded document, then
+    build the INSERT args. Mutates draft in place so the column and the
+    JSONB document agree."""
+    draft["jd_number"] = new_number
+    return _insert_args(draft, new_number)
+
+
 async def main():
     await jd_db.init_pool()
     if not jd_db.is_db_available():
@@ -47,7 +55,6 @@ async def main():
     for draft in local_drafts:
         old_number = draft.get("jd_number")
         new_number = await jd_storage._next_jd_number(draft["lob"])
-        draft["jd_number"] = new_number
 
         await pool.execute(
             """
@@ -56,7 +63,7 @@ async def main():
                  linked_conversation_id, created_at, updated_at, data)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             """,
-            *_insert_args(draft, new_number),
+            *_prepare_migration(draft, new_number),
         )
         jd_local_storage.delete_draft(draft["id"])
         print(f"Migrated {old_number} -> {new_number} ({draft['id']})")
