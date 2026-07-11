@@ -22,3 +22,6 @@ frontend/.vite/
 
 # Personal Claude Code tool-permission allowlist (session/machine-specific)
 .claude/settings.local.json
+
+# Git worktrees used for isolated agent work
+.worktrees/
