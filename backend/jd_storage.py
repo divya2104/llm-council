@@ -3,11 +3,100 @@
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-from . import jd_db
+from . import jd_config, jd_db
+
+REQUIRED_BASICS_FIELDS = [
+    "business", "unit", "location", "poornata_position_number",
+    "reports_to_position_number", "poornata_position_title",
+    "reports_to_position_title", "function", "reports_to_function",
+    "department", "reports_to_department", "designation_employee",
+    "designation_manager", "org_hierarchy_level",
+]
 
 
 def _empty_hierarchy_box():
     return {"title": "", "band": ""}
+
+
+def validate_jd_draft(draft: Dict[str, Any]) -> Dict[str, list]:
+    """Check NON-NEGOTIABLE completeness rules. Returns {step_key: [errors]}, empty if complete."""
+    errors: Dict[str, list] = {}
+
+    basics = draft.get("basics", {})
+    missing = [f for f in REQUIRED_BASICS_FIELDS + ["date_of_writing"] if not str(basics.get(f, "")).strip()]
+    if missing:
+        errors["basics"] = [f"Missing required field: {f}" for f in missing]
+
+    purpose_text = draft.get("purpose", {}).get("text", "")
+    if not (jd_config.JOB_PURPOSE_MIN_CHARS <= len(purpose_text) <= jd_config.JOB_PURPOSE_MAX_CHARS):
+        errors["purpose"] = [
+            f"Job purpose must be between {jd_config.JOB_PURPOSE_MIN_CHARS} and "
+            f"{jd_config.JOB_PURPOSE_MAX_CHARS} characters (currently {len(purpose_text)})"
+        ]
+
+    context = draft.get("context", {})
+    context_errors = []
+    if len(context.get("job_context", "")) < jd_config.JOB_CONTEXT_MIN_CHARS:
+        context_errors.append(
+            f"Job context must be at least {jd_config.JOB_CONTEXT_MIN_CHARS} characters"
+        )
+    challenges = [c for c in context.get("key_challenges", []) if str(c).strip()]
+    if len(challenges) < jd_config.MIN_CHALLENGES:
+        context_errors.append(f"At least {jd_config.MIN_CHALLENGES} distinct challenges required")
+    if context_errors:
+        errors["context"] = context_errors
+
+    accountability_rows = [
+        r for r in draft.get("accountabilities", {}).get("rows", [])
+        if str(r.get("accountability", "")).strip() and str(r.get("supporting_actions", "")).strip()
+    ]
+    if len(accountability_rows) < jd_config.MIN_ACCOUNTABILITIES:
+        errors["accountabilities"] = [
+            f"At least {jd_config.MIN_ACCOUNTABILITIES} accountabilities required "
+            f"(currently {len(accountability_rows)})"
+        ]
+
+    reports = draft.get("reports_and_relationships", {})
+    reports_errors = []
+    internal = [r for r in reports.get("internal_relationships", []) if str(r.get("stakeholder", "")).strip()]
+    if len(internal) < jd_config.MIN_INTERNAL_RELATIONSHIPS:
+        reports_errors.append(f"At least {jd_config.MIN_INTERNAL_RELATIONSHIPS} internal relationships required")
+    external = [r for r in reports.get("external_relationships", []) if str(r.get("stakeholder", "")).strip()]
+    if len(external) < jd_config.MIN_EXTERNAL_RELATIONSHIPS:
+        reports_errors.append(f"At least {jd_config.MIN_EXTERNAL_RELATIONSHIPS} external relationships required")
+    if reports_errors:
+        errors["reports_and_relationships"] = reports_errors
+
+    hay = draft.get("hay_factors", {})
+    know_how = hay.get("know_how", {})
+    decision_making = hay.get("decision_making", {})
+    hay_errors = []
+    if not know_how.get("min_qualification"):
+        hay_errors.append("Minimum qualification is required")
+    if not str(know_how.get("years_of_experience", "")).strip():
+        hay_errors.append("Years of experience is required")
+    if not know_how.get("technical_expertise_areas"):
+        hay_errors.append("At least one technical expertise area is required")
+    if not str(know_how.get("industry_experience", "")).strip():
+        hay_errors.append("Industry experience is required")
+    for field in ["independent_decisions", "decisions_needing_approval", "financial_approval_limit", "advisory_vs_final_authority"]:
+        if not str(decision_making.get(field, "")).strip():
+            hay_errors.append(f"Missing required field: {field}")
+    if hay_errors:
+        errors["hay_factors"] = hay_errors
+
+    sign_off = draft.get("sign_off", {})
+    sign_off_errors = []
+    if not str(sign_off.get("prepared_by_name", "")).strip():
+        sign_off_errors.append("Name is required")
+    if not str(sign_off.get("prepared_by_email", "")).strip():
+        sign_off_errors.append("Email is required")
+    if not sign_off.get("confirmed"):
+        sign_off_errors.append("Confirmation checkbox must be checked")
+    if sign_off_errors:
+        errors["sign_off"] = sign_off_errors
+
+    return errors
 
 
 async def _next_jd_number(lob: str) -> str:
@@ -195,68 +284,17 @@ async def save_jd_draft(draft: Dict[str, Any]):
 
 
 def _calculate_completion_percent(draft: Dict[str, Any]) -> int:
-    """Rough percent-complete across the 8 wizard steps, mirroring generate-readiness checks."""
+    """Percent of wizard steps passing the same NON-NEGOTIABLE rules as generate-time validation.
+
+    Dimensions is negotiable and always counts as done; the other 7 steps
+    count as done when validate_jd_draft reports no errors for them.
+    """
+    errors = validate_jd_draft(draft)
     total_steps = 8
-    complete = 0
-
-    basics = draft.get("basics", {})
-    required_basics = [
-        "business", "unit", "location", "poornata_position_number",
-        "reports_to_position_number", "poornata_position_title",
-        "reports_to_position_title", "function", "reports_to_function",
-        "department", "reports_to_department", "designation_employee",
-        "designation_manager", "org_hierarchy_level",
-    ]
-    if all(str(basics.get(f, "")).strip() for f in required_basics):
-        complete += 1
-
-    if len(draft.get("purpose", {}).get("text", "")) >= 100:
-        complete += 1
-
-    complete += 1  # dimensions is negotiable, always counts as done
-
-    context = draft.get("context", {})
-    challenges = [c for c in context.get("key_challenges", []) if str(c).strip()]
-    if len(context.get("job_context", "")) >= 200 and len(challenges) >= 3:
-        complete += 1
-
-    accountability_rows = [
-        r for r in draft.get("accountabilities", {}).get("rows", [])
-        if str(r.get("accountability", "")).strip() and str(r.get("supporting_actions", "")).strip()
-    ]
-    if len(accountability_rows) >= 5:
-        complete += 1
-
-    reports = draft.get("reports_and_relationships", {})
-    internal = [r for r in reports.get("internal_relationships", []) if str(r.get("stakeholder", "")).strip()]
-    external = [r for r in reports.get("external_relationships", []) if str(r.get("stakeholder", "")).strip()]
-    if len(internal) >= 3 and len(external) >= 2:
-        complete += 1
-
-    hay = draft.get("hay_factors", {})
-    know_how = hay.get("know_how", {})
-    decision_making = hay.get("decision_making", {})
-    hay_ok = (
-        bool(know_how.get("min_qualification"))
-        and str(know_how.get("years_of_experience", "")).strip() != ""
-        and bool(know_how.get("technical_expertise_areas"))
-        and str(know_how.get("industry_experience", "")).strip() != ""
-        and all(
-            str(decision_making.get(f, "")).strip()
-            for f in ["independent_decisions", "decisions_needing_approval", "financial_approval_limit", "advisory_vs_final_authority"]
-        )
-    )
-    if hay_ok:
-        complete += 1
-
-    sign_off = draft.get("sign_off", {})
-    if (
-        str(sign_off.get("prepared_by_name", "")).strip()
-        and str(sign_off.get("prepared_by_email", "")).strip()
-        and sign_off.get("confirmed")
-    ):
-        complete += 1
-
+    complete = 1  # dimensions
+    complete += sum(1 for step in ("basics", "purpose", "context", "accountabilities",
+                                    "reports_and_relationships", "hay_factors", "sign_off")
+                     if step not in errors)
     return round((complete / total_steps) * 100)
 
 

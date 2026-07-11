@@ -1,8 +1,10 @@
 """API routes for the JD Creator wizard (Phase 1)."""
 
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, File, Form
 from pydantic import BaseModel
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 import uuid
 
 from . import jd_storage
@@ -12,24 +14,11 @@ from . import jd_excel
 
 router = APIRouter(prefix="/api/jd")
 
-STEP_KEYS = {
-    "basics",
-    "purpose",
-    "dimensions",
-    "context",
-    "accountabilities",
-    "reports_and_relationships",
-    "hay_factors",
-    "sign_off",
-}
+STEP_KEYS = {step["key"] for step in jd_config.WIZARD_STEPS}
 
 
 class CreateJdDraftRequest(BaseModel):
     lob: str
-
-
-class GenerateJdRequest(BaseModel):
-    pass
 
 
 @router.get("/config")
@@ -180,96 +169,8 @@ async def delete_draft(jd_id: str):
     return {"deleted": True}
 
 
-def _validate_for_generate(draft: Dict[str, Any]) -> Dict[str, list]:
-    """Re-validate NON-NEGOTIABLE completeness server-side. Returns {step_key: [errors]}."""
-    errors: Dict[str, list] = {}
-
-    basics = draft.get("basics", {})
-    required_basics = [
-        "business", "unit", "location", "poornata_position_number",
-        "reports_to_position_number", "poornata_position_title",
-        "reports_to_position_title", "function", "reports_to_function",
-        "department", "reports_to_department", "designation_employee",
-        "designation_manager", "org_hierarchy_level", "date_of_writing",
-    ]
-    missing = [f for f in required_basics if not str(basics.get(f, "")).strip()]
-    if missing:
-        errors["basics"] = [f"Missing required field: {f}" for f in missing]
-
-    purpose_text = draft.get("purpose", {}).get("text", "")
-    if not (jd_config.JOB_PURPOSE_MIN_CHARS <= len(purpose_text) <= jd_config.JOB_PURPOSE_MAX_CHARS):
-        errors["purpose"] = [
-            f"Job purpose must be between {jd_config.JOB_PURPOSE_MIN_CHARS} and "
-            f"{jd_config.JOB_PURPOSE_MAX_CHARS} characters (currently {len(purpose_text)})"
-        ]
-
-    context = draft.get("context", {})
-    context_errors = []
-    if len(context.get("job_context", "")) < jd_config.JOB_CONTEXT_MIN_CHARS:
-        context_errors.append(
-            f"Job context must be at least {jd_config.JOB_CONTEXT_MIN_CHARS} characters"
-        )
-    challenges = [c for c in context.get("key_challenges", []) if str(c).strip()]
-    if len(challenges) < jd_config.MIN_CHALLENGES:
-        context_errors.append(f"At least {jd_config.MIN_CHALLENGES} distinct challenges required")
-    if context_errors:
-        errors["context"] = context_errors
-
-    accountability_rows = [
-        r for r in draft.get("accountabilities", {}).get("rows", [])
-        if str(r.get("accountability", "")).strip() and str(r.get("supporting_actions", "")).strip()
-    ]
-    if len(accountability_rows) < jd_config.MIN_ACCOUNTABILITIES:
-        errors["accountabilities"] = [
-            f"At least {jd_config.MIN_ACCOUNTABILITIES} accountabilities required "
-            f"(currently {len(accountability_rows)})"
-        ]
-
-    reports = draft.get("reports_and_relationships", {})
-    reports_errors = []
-    internal = [r for r in reports.get("internal_relationships", []) if str(r.get("stakeholder", "")).strip()]
-    if len(internal) < jd_config.MIN_INTERNAL_RELATIONSHIPS:
-        reports_errors.append(f"At least {jd_config.MIN_INTERNAL_RELATIONSHIPS} internal relationships required")
-    external = [r for r in reports.get("external_relationships", []) if str(r.get("stakeholder", "")).strip()]
-    if len(external) < jd_config.MIN_EXTERNAL_RELATIONSHIPS:
-        reports_errors.append(f"At least {jd_config.MIN_EXTERNAL_RELATIONSHIPS} external relationships required")
-    if reports_errors:
-        errors["reports_and_relationships"] = reports_errors
-
-    hay = draft.get("hay_factors", {})
-    know_how = hay.get("know_how", {})
-    decision_making = hay.get("decision_making", {})
-    hay_errors = []
-    if not know_how.get("min_qualification"):
-        hay_errors.append("Minimum qualification is required")
-    if not str(know_how.get("years_of_experience", "")).strip():
-        hay_errors.append("Years of experience is required")
-    if not know_how.get("technical_expertise_areas"):
-        hay_errors.append("At least one technical expertise area is required")
-    if not str(know_how.get("industry_experience", "")).strip():
-        hay_errors.append("Industry experience is required")
-    for field in ["independent_decisions", "decisions_needing_approval", "financial_approval_limit", "advisory_vs_final_authority"]:
-        if not str(decision_making.get(field, "")).strip():
-            hay_errors.append(f"Missing required field: {field}")
-    if hay_errors:
-        errors["hay_factors"] = hay_errors
-
-    sign_off = draft.get("sign_off", {})
-    sign_off_errors = []
-    if not str(sign_off.get("prepared_by_name", "")).strip():
-        sign_off_errors.append("Name is required")
-    if not str(sign_off.get("prepared_by_email", "")).strip():
-        sign_off_errors.append("Email is required")
-    if not sign_off.get("confirmed"):
-        sign_off_errors.append("Confirmation checkbox must be checked")
-    if sign_off_errors:
-        errors["sign_off"] = sign_off_errors
-
-    return errors
-
-
 @router.post("/drafts/{jd_id}/generate")
-async def generate_jd(jd_id: str, request: Request, body: Optional[GenerateJdRequest] = None):
+async def generate_jd(jd_id: str, request: Request):
     """Validate completeness, flip status to generated, and return a stub result.
 
     Phase 1 does not call any AI model — real Hay-style JD assembly is Phase 2.
@@ -278,11 +179,9 @@ async def generate_jd(jd_id: str, request: Request, body: Optional[GenerateJdReq
     if draft is None:
         raise HTTPException(status_code=404, detail="JD draft not found")
 
-    errors = _validate_for_generate(draft)
+    errors = jd_storage.validate_jd_draft(draft)
     if errors:
         raise HTTPException(status_code=400, detail={"message": "JD draft is incomplete", "errors": errors})
-
-    from datetime import datetime
 
     sign_off = draft.get("sign_off", {})
     sign_off["confirmed_at"] = datetime.utcnow().isoformat()
