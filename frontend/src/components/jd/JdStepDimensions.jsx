@@ -27,12 +27,6 @@ export default function JdStepDimensions({ value, onChange }) {
         (e.g. "Total AAUM", "Loan disbursed").
       </p>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <button className="jd-secondary-btn" disabled title="Coming soon">Manual Entry</button>
-        <button className="jd-stub-btn" disabled title="Coming soon">Upload Excel</button>
-        <button className="jd-stub-btn" disabled title="Coming soon">Download Blank Template</button>
-      </div>
-
       <table className="jd-table">
         <thead>
           <tr>

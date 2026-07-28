@@ -338,10 +338,83 @@
   max-width: 640px;
 }
 
+/* --- Sub-navigation inside a step: shows one dense sub-section (e.g. one
+   Hay factor) at a time instead of stacking all of them on one long scroll. --- */
+
+.jd-subnav-tablist {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.jd-subnav-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.jd-subnav-tab:hover {
+  color: var(--ink);
+}
+
+.jd-subnav-tab.active {
+  color: var(--brand);
+  border-bottom-color: var(--brand);
+  font-weight: 600;
+}
+
+.jd-subnav-tab-error-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--error);
+  flex-shrink: 0;
+}
+
 .jd-field-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
+}
+
+/* Explicit-ratio rows: used where fields must sit on a fixed, named split
+   rather than the auto-fit grid's responsive column count. */
+.jd-field-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* --- Field groups: cluster related fields under a quiet section label,
+   so a dense step reads as named concepts rather than one flat wall. --- */
+
+.jd-field-group {
+  margin-bottom: 28px;
+}
+
+.jd-field-group:last-child {
+  margin-bottom: 0;
+}
+
+.jd-field-group-heading {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
 }
 
 .jd-field {
@@ -396,6 +469,16 @@
   border-color: var(--error);
 }
 
+.jd-challenge-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.jd-challenge-row input {
+  flex: 1;
+}
+
 .jd-field-error {
   color: var(--error);
   font-size: 12px;
@@ -419,7 +502,8 @@
 
 .jd-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin-bottom: 12px;
 }
 
@@ -429,10 +513,18 @@
   font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--brand-deep);
   padding: 8px;
-  background: var(--paper);
-  border-bottom: 1px solid var(--rule);
+  background: var(--brand-wash);
+  border: 1px solid var(--rule-strong);
+}
+
+.jd-table th:first-child {
+  border-top-left-radius: 6px;
+}
+
+.jd-table th:last-child {
+  border-top-right-radius: 6px;
 }
 
 .jd-table td {
@@ -461,7 +553,7 @@
   padding: 4px 8px;
 }
 
-.jd-add-row-btn, .jd-secondary-btn {
+.jd-add-row-btn {
   padding: 8px 14px;
   background: var(--panel);
   border: 1px solid var(--brand);
@@ -473,18 +565,8 @@
   transition: background 0.15s;
 }
 
-.jd-add-row-btn:hover, .jd-secondary-btn:hover {
+.jd-add-row-btn:hover {
   background: var(--brand-wash);
-}
-
-.jd-stub-btn {
-  padding: 8px 14px;
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  color: var(--muted);
-  cursor: not-allowed;
-  font-size: 13px;
 }
 
 .jd-row-count {
@@ -566,6 +648,15 @@
   background: var(--brand-wash);
 }
 
+.jd-hierarchy-box-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.jd-hierarchy-box-label.this-role {
+  color: var(--brand);
+}
+
 .jd-hierarchy-box input {
   padding: 4px 6px;
   font-size: 12px;
@@ -613,9 +704,9 @@
 }
 
 .jd-nav-btn.save-draft {
-  background: #FFBF00;
-  border: 1px solid #FFBF00;
-  color: var(--ink);
+  background: var(--warning);
+  border: 1px solid var(--warning);
+  color: #fff;
 }
 
 .jd-nav-btn.save-draft:hover {

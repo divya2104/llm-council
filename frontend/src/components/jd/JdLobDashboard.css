@@ -347,7 +347,7 @@
 }
 
 .jd-card.status-draft {
-  border-top-color: rgb(227, 116, 0);
+  border-top-color: var(--warning);
 }
 
 .jd-card.status-completed {
@@ -361,7 +361,7 @@
 }
 
 .jd-card.status-draft:hover {
-  border-top-color: rgb(227, 116, 0);
+  border-top-color: var(--warning);
 }
 
 .jd-card.status-completed:hover {

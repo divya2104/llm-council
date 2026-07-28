@@ -45,11 +45,11 @@
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: filter 0.15s;
 }
 
 .jd-confirm-danger-btn:hover {
-  background: #96201a;
+  filter: brightness(0.88);
 }
 
 .jd-confirm-danger-btn:disabled,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 function TagInput({ tags, onChange, placeholder }) {
   const [input, setInput] = useState('');
@@ -39,7 +39,22 @@ function TagInput({ tags, onChange, placeholder }) {
   );
 }
 
+const FACTORS = [
+  { key: 'know_how', label: '1. Know-How', title: 'Know-How Requirements', badge: 'non-negotiable', badgeText: 'Non-Negotiable' },
+  { key: 'decision_making', label: '2. Decision-Making', title: 'Decision-Making Authority', badge: 'non-negotiable', badgeText: 'Non-Negotiable' },
+  { key: 'problem_solving', label: '3. Problem Solving', title: 'Problem Solving Context', badge: 'recommended', badgeText: 'Recommended' },
+];
+
+const FACTOR_ERROR_KEYS = {
+  know_how: ['min_qualification', 'years_of_experience', 'technical_expertise_areas', 'industry_experience'],
+  decision_making: ['independent_decisions', 'decisions_needing_approval', 'financial_approval_limit', 'advisory_vs_final_authority'],
+  problem_solving: [],
+};
+
 export default function JdStepHay({ value, onChange, config, errors }) {
+  const [activeFactor, setActiveFactor] = useState(FACTORS[0].key);
+  const tabRefs = useRef([]);
+
   const hay = value || { know_how: {}, decision_making: {}, problem_solving: {} };
   const knowHow = hay.know_how || {};
   const decisionMaking = hay.decision_making || {};
@@ -62,15 +77,56 @@ export default function JdStepHay({ value, onChange, config, errors }) {
     }
   };
 
+  const factorHasError = (key) => FACTOR_ERROR_KEYS[key].some((field) => errors?.[field]);
+
+  const handleTabKeyDown = (e, idx) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const nextIdx = e.key === 'ArrowRight'
+      ? (idx + 1) % FACTORS.length
+      : (idx - 1 + FACTORS.length) % FACTORS.length;
+    setActiveFactor(FACTORS[nextIdx].key);
+    tabRefs.current[nextIdx]?.focus();
+  };
+
+  const activeMeta = FACTORS.find((f) => f.key === activeFactor);
+
   return (
     <div>
       <div className="jd-step-title">
         <h3>Step 7: Hay Factors</h3>
       </div>
 
+      <div className="jd-subnav-tablist" role="tablist" aria-label="Hay evaluation factors">
+        {FACTORS.map((factor, idx) => (
+          <button
+            key={factor.key}
+            ref={(el) => { tabRefs.current[idx] = el; }}
+            role="tab"
+            id={`jd-hay-tab-${factor.key}`}
+            aria-selected={activeFactor === factor.key}
+            aria-controls={`jd-hay-panel-${factor.key}`}
+            tabIndex={activeFactor === factor.key ? 0 : -1}
+            className={`jd-subnav-tab ${activeFactor === factor.key ? 'active' : ''}`}
+            onClick={() => setActiveFactor(factor.key)}
+            onKeyDown={(e) => handleTabKeyDown(e, idx)}
+          >
+            {factor.label}
+            {factorHasError(factor.key) && <span className="jd-subnav-tab-error-dot" aria-label="Has errors" />}
+          </button>
+        ))}
+      </div>
+
+      <div
+        role="tabpanel"
+        id={`jd-hay-panel-${activeFactor}`}
+        aria-labelledby={`jd-hay-tab-${activeFactor}`}
+      >
+      {activeFactor === 'know_how' && (
+      <>
       <div className="jd-step-title">
-        <h4 style={{ margin: 0 }}>1. Know-How Requirements</h4>
-        <span className="jd-badge non-negotiable">Non-Negotiable</span>
+        <h4 style={{ margin: 0 }}>{activeMeta.title}</h4>
+        <span className={`jd-badge ${activeMeta.badge}`}>{activeMeta.badgeText}</span>
       </div>
       <div className="jd-field-grid">
         <div className={`jd-field ${errors?.min_qualification ? 'has-error' : ''}`}>
@@ -135,32 +191,36 @@ export default function JdStepHay({ value, onChange, config, errors }) {
           {errors?.industry_experience && <div className="jd-field-error">{errors.industry_experience}</div>}
         </div>
       </div>
+      </>
+      )}
 
+      {activeFactor === 'decision_making' && (
+      <>
       <div className="jd-step-title">
-        <h4 style={{ margin: 0 }}>2. Decision-Making Authority</h4>
-        <span className="jd-badge non-negotiable">Non-Negotiable</span>
+        <h4 style={{ margin: 0 }}>{activeMeta.title}</h4>
+        <span className={`jd-badge ${activeMeta.badge}`}>{activeMeta.badgeText}</span>
       </div>
-      <div className="jd-field-grid">
-        <div className={`jd-field ${errors?.independent_decisions ? 'has-error' : ''}`}>
-          <label>Independent Decisions *</label>
-          <textarea
-            rows={3}
-            placeholder="e.g. Approve expense budgets up to ₹5 Cr, hire within approved headcount..."
-            value={decisionMaking.independent_decisions || ''}
-            onChange={(e) => setDecisionMaking('independent_decisions', e.target.value)}
-          />
-          {errors?.independent_decisions && <div className="jd-field-error">{errors.independent_decisions}</div>}
-        </div>
-        <div className={`jd-field ${errors?.decisions_needing_approval ? 'has-error' : ''}`}>
-          <label>Decisions Needing Approval *</label>
-          <textarea
-            rows={3}
-            placeholder="e.g. Capital expenditure > ₹5 Cr requires CEO approval..."
-            value={decisionMaking.decisions_needing_approval || ''}
-            onChange={(e) => setDecisionMaking('decisions_needing_approval', e.target.value)}
-          />
-          {errors?.decisions_needing_approval && <div className="jd-field-error">{errors.decisions_needing_approval}</div>}
-        </div>
+      <div className={`jd-field ${errors?.independent_decisions ? 'has-error' : ''}`}>
+        <label>Independent Decisions *</label>
+        <textarea
+          rows={3}
+          placeholder="e.g. Approve expense budgets up to ₹5 Cr, hire within approved headcount..."
+          value={decisionMaking.independent_decisions || ''}
+          onChange={(e) => setDecisionMaking('independent_decisions', e.target.value)}
+        />
+        {errors?.independent_decisions && <div className="jd-field-error">{errors.independent_decisions}</div>}
+      </div>
+      <div className={`jd-field ${errors?.decisions_needing_approval ? 'has-error' : ''}`}>
+        <label>Decisions Needing Approval *</label>
+        <textarea
+          rows={3}
+          placeholder="e.g. Capital expenditure > ₹5 Cr requires CEO approval..."
+          value={decisionMaking.decisions_needing_approval || ''}
+          onChange={(e) => setDecisionMaking('decisions_needing_approval', e.target.value)}
+        />
+        {errors?.decisions_needing_approval && <div className="jd-field-error">{errors.decisions_needing_approval}</div>}
+      </div>
+      <div className="jd-field-row-2">
         <div className={`jd-field ${errors?.financial_approval_limit ? 'has-error' : ''}`}>
           <label>Financial Approval Limit *</label>
           <input
@@ -182,31 +242,35 @@ export default function JdStepHay({ value, onChange, config, errors }) {
           {errors?.advisory_vs_final_authority && <div className="jd-field-error">{errors.advisory_vs_final_authority}</div>}
         </div>
       </div>
+      </>
+      )}
 
+      {activeFactor === 'problem_solving' && (
+      <>
       <div className="jd-step-title">
-        <h4 style={{ margin: 0 }}>3. Problem Solving Context</h4>
-        <span className="jd-badge recommended">Recommended</span>
+        <h4 style={{ margin: 0 }}>{activeMeta.title}</h4>
+        <span className={`jd-badge ${activeMeta.badge}`}>{activeMeta.badgeText}</span>
       </div>
       <p className="jd-step-help">Optional — does not block JD generation, but improves scoring accuracy.</p>
-      <div className="jd-field-grid">
-        <div className="jd-field">
-          <label>Thinking Environment</label>
-          <textarea
-            rows={2}
-            placeholder="Describe how structured or ambiguous the role's operating environment is..."
-            value={problemSolving.thinking_environment || ''}
-            onChange={(e) => setProblemSolving('thinking_environment', e.target.value)}
-          />
-        </div>
-        <div className="jd-field">
-          <label>Types of Problems Encountered</label>
-          <textarea
-            rows={2}
-            placeholder="List typical problems this role solves..."
-            value={problemSolving.types_of_problems || ''}
-            onChange={(e) => setProblemSolving('types_of_problems', e.target.value)}
-          />
-        </div>
+      <div className="jd-field">
+        <label>Thinking Environment</label>
+        <textarea
+          rows={2}
+          placeholder="Describe how structured or ambiguous the role's operating environment is..."
+          value={problemSolving.thinking_environment || ''}
+          onChange={(e) => setProblemSolving('thinking_environment', e.target.value)}
+        />
+      </div>
+      <div className="jd-field">
+        <label>Types of Problems Encountered</label>
+        <textarea
+          rows={2}
+          placeholder="List typical problems this role solves..."
+          value={problemSolving.types_of_problems || ''}
+          onChange={(e) => setProblemSolving('types_of_problems', e.target.value)}
+        />
+      </div>
+      <div className="jd-field-row-2">
         <div className="jd-field">
           <label>Degree of Ambiguity</label>
           <select
@@ -217,6 +281,9 @@ export default function JdStepHay({ value, onChange, config, errors }) {
             {ambiguityLevels.map((a) => <option value={a} key={a}>{a}</option>)}
           </select>
         </div>
+      </div>
+      </>
+      )}
       </div>
     </div>
   );

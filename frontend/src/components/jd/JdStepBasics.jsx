@@ -10,7 +10,7 @@ function HierarchyBoxList({ label, boxes, onChange }) {
     <div className="jd-hierarchy-row">
       {boxes.map((box, idx) => (
         <div className="jd-hierarchy-box" key={idx}>
-          <strong style={{ fontSize: 11, color: '#666' }}>{label}</strong>
+          <strong className="jd-hierarchy-box-label">{label}</strong>
           <input
             placeholder="Role title"
             value={box.title}
@@ -71,81 +71,96 @@ export default function JdStepBasics({ value, onChange, config, errors, lob }) {
         These fields establish who the role is, where it sits in the organization, and who it reports to.
       </p>
 
-      <div className="jd-field-grid">
-        <div className="jd-field">
-          <label>LOB Selection (locked)</label>
-          <input type="text" value={lob} disabled />
+      <div className="jd-field-group">
+        <div className="jd-field-group-heading">Role Identity &amp; Position IDs</div>
+        <div className="jd-field-grid">
+          <div className="jd-field">
+            <label>LOB Selection (locked)</label>
+            <input type="text" value={lob} disabled />
+          </div>
+
+          {field('poornata_position_number', 'Poornata Position Number')}
+          {field('poornata_position_title', 'Poornata Position Title')}
+          {field('designation_employee', 'Designation of Employee')}
+
+          {field('org_hierarchy_level', 'Organization Hierarchy Level', (
+            <select value={basics.org_hierarchy_level || ''} onChange={(e) => set('org_hierarchy_level', e.target.value)}>
+              <option value="">Select band</option>
+              {hierarchyLevels.map((l) => <option value={l} key={l}>{l}</option>)}
+            </select>
+          ))}
+
+          {field('date_of_writing', 'Date of Writing', (
+            <input
+              type="date"
+              value={basics.date_of_writing || ''}
+              onChange={(e) => set('date_of_writing', e.target.value)}
+            />
+          ))}
         </div>
+      </div>
 
-        {field('business', 'Business', (
-          <input
-            list="jd-business-options"
-            value={basics.business || ''}
-            onChange={(e) => set('business', e.target.value)}
-          />
-        ))}
-        <datalist id="jd-business-options">
-          {businessOptions.map((b) => <option value={b} key={b} />)}
-        </datalist>
+      <div className="jd-field-group">
+        <div className="jd-field-group-heading">Location &amp; Org Placement</div>
+        <div className="jd-field-grid">
+          {field('business', 'Business', (
+            <input
+              list="jd-business-options"
+              value={basics.business || ''}
+              onChange={(e) => set('business', e.target.value)}
+            />
+          ))}
+          <datalist id="jd-business-options">
+            {businessOptions.map((b) => <option value={b} key={b} />)}
+          </datalist>
 
-        {field('unit', 'Unit', (
-          <input
-            type="text"
-            maxLength={100}
-            value={basics.unit || ''}
-            onChange={(e) => set('unit', e.target.value)}
-          />
-        ))}
+          {field('unit', 'Unit', (
+            <input
+              type="text"
+              maxLength={100}
+              value={basics.unit || ''}
+              onChange={(e) => set('unit', e.target.value)}
+            />
+          ))}
 
-        {field('location', 'Location', (
-          <input
-            list="jd-city-options"
-            value={basics.location || ''}
-            onChange={(e) => set('location', e.target.value)}
-          />
-        ))}
-        <datalist id="jd-city-options">
-          {cityOptions.map((c) => <option value={c} key={c} />)}
-        </datalist>
+          {field('location', 'Location', (
+            <input
+              list="jd-city-options"
+              value={basics.location || ''}
+              onChange={(e) => set('location', e.target.value)}
+            />
+          ))}
+          <datalist id="jd-city-options">
+            {cityOptions.map((c) => <option value={c} key={c} />)}
+          </datalist>
 
-        {field('poornata_position_number', 'Poornata Position Number')}
-        {field('reports_to_position_number', 'Reports To: Position Number')}
-        {field('poornata_position_title', 'Poornata Position Title')}
-        {field('reports_to_position_title', 'Reports To: Position Title')}
-        {field('function', 'Function')}
-        {field('reports_to_function', 'Reports To: Function')}
+          {field('function', 'Function')}
 
-        {field('department', 'Department', (
-          <select value={basics.department || ''} onChange={(e) => set('department', e.target.value)}>
-            <option value="">Select department</option>
-            {departmentOptions.map((d) => <option value={d} key={d}>{d}</option>)}
-          </select>
-        ))}
+          {field('department', 'Department', (
+            <select value={basics.department || ''} onChange={(e) => set('department', e.target.value)}>
+              <option value="">Select department</option>
+              {departmentOptions.map((d) => <option value={d} key={d}>{d}</option>)}
+            </select>
+          ))}
+        </div>
+      </div>
 
-        {field('reports_to_department', 'Reports To: Department', (
-          <select value={basics.reports_to_department || ''} onChange={(e) => set('reports_to_department', e.target.value)}>
-            <option value="">Select department</option>
-            {reportsToDepartmentOptions.map((d) => <option value={d} key={d}>{d}</option>)}
-          </select>
-        ))}
+      <div className="jd-field-group">
+        <div className="jd-field-group-heading">Reporting Line</div>
+        <div className="jd-field-grid">
+          {field('reports_to_position_number', 'Reports To: Position Number')}
+          {field('reports_to_position_title', 'Reports To: Position Title')}
+          {field('reports_to_function', 'Reports To: Function')}
 
-        {field('designation_employee', 'Designation of Employee')}
-        {field('designation_manager', 'Designation of Manager')}
+          {field('reports_to_department', 'Reports To: Department', (
+            <select value={basics.reports_to_department || ''} onChange={(e) => set('reports_to_department', e.target.value)}>
+              <option value="">Select department</option>
+              {reportsToDepartmentOptions.map((d) => <option value={d} key={d}>{d}</option>)}
+            </select>
+          ))}
 
-        {field('org_hierarchy_level', 'Organization Hierarchy Level', (
-          <select value={basics.org_hierarchy_level || ''} onChange={(e) => set('org_hierarchy_level', e.target.value)}>
-            <option value="">Select band</option>
-            {hierarchyLevels.map((l) => <option value={l} key={l}>{l}</option>)}
-          </select>
-        ))}
-
-        {field('date_of_writing', 'Date of Writing', (
-          <input
-            type="date"
-            value={basics.date_of_writing || ''}
-            onChange={(e) => set('date_of_writing', e.target.value)}
-          />
-        ))}
+          {field('designation_manager', 'Designation of Manager')}
+        </div>
       </div>
 
       <h4>Organization Hierarchy Visual</h4>
@@ -165,7 +180,7 @@ export default function JdStepBasics({ value, onChange, config, errors, lob }) {
         />
         <div className="jd-hierarchy-row">
           <div className="jd-hierarchy-box this-role">
-            <strong style={{ fontSize: 11, color: '#4a90e2' }}>This Role</strong>
+            <strong className="jd-hierarchy-box-label this-role">This Role</strong>
             <input
               placeholder="Role title"
               value={visual.this_role?.title || ''}
